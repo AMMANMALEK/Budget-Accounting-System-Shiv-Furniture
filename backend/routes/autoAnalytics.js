@@ -5,6 +5,56 @@ const { createResourceAccessMiddleware } = require('../middleware/accessControlM
 
 const router = express.Router();
 
+const mapUiStatusToState = (status) => {
+  const s = (status || '').toString().toLowerCase();
+  if (s === 'active') return 'confirmed';
+  if (s === 'inactive') return 'cancelled';
+  if (s === 'draft') return 'draft';
+  return 'confirmed';
+};
+
+const mapStateToUiStatus = (state) => {
+  const s = (state || '').toString().toLowerCase();
+  if (s === 'confirmed') return 'Active';
+  if (s === 'cancelled') return 'Inactive';
+  if (s === 'draft') return 'Inactive';
+  return 'Active';
+};
+
+const mapModelToUi = (model) => {
+  if (!model) return model;
+  return {
+    id: model.id,
+    name: model.name,
+    condition: model.condition || (model.conditions ? JSON.stringify(model.conditions) : ''),
+    action: model.action || (model.actions ? JSON.stringify(model.actions) : ''),
+    status: mapStateToUiStatus(model.state),
+    createdAt: model.createdAt,
+    updatedAt: model.updatedAt
+  };
+};
+
+const mapUiToModel = (payload = {}) => {
+  // AutoRules UI sends free-form strings; backend service requires:
+  // - analytics_to_apply
+  // - state
+  // - at least one of partner_id/partner_tag_id/product_id/product_category_id
+  // We'll store UI condition/action as-is and use a generic partner_tag_id = 1 so validation passes.
+  const status = payload.status;
+  const state = payload.state || mapUiStatusToState(status);
+
+  return {
+    name: payload.name,
+    condition: payload.condition,
+    action: payload.action,
+    state,
+    analytics_to_apply: payload.analytics_to_apply || payload.action || 'AUTO',
+    partner_tag_id: payload.partner_tag_id || 1,
+    createdAt: payload.createdAt,
+    updatedAt: payload.updatedAt
+  };
+};
+
 // Mock database functions
 let mockAutoAnalyticsModels = [
   {
@@ -20,7 +70,7 @@ let mockAutoAnalyticsModels = [
       subCategory: 'Licenses',
       tags: ['software', 'license']
     },
-    isActive: true,
+    state: 'confirmed',
     priority: 1,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
@@ -38,7 +88,7 @@ let mockAutoAnalyticsModels = [
       subCategory: 'Supplies',
       tags: ['office', 'supplies']
     },
-    isActive: true,
+    state: 'confirmed',
     priority: 2,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
@@ -75,7 +125,7 @@ const saveAutoAnalyticsModel = async (modelData) => {
   const newModel = {
     id: mockAutoAnalyticsModels.length + 1,
     ...modelData,
-    isActive: true,
+    state: 'confirmed',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
@@ -109,7 +159,10 @@ router.get('/', requireAuth, async (req, res) => {
   try {
     const { page = 0, limit = 10, search = '' } = req.query;
     const result = await getAllAutoAnalyticsModels(parseInt(page), parseInt(limit), search);
-    res.json(result);
+    res.json({
+      ...result,
+      data: (result.data || []).map(mapModelToUi)
+    });
   } catch (error) {
     res.status(500).json({
       error: 'Failed to fetch auto analytics models',
@@ -128,7 +181,7 @@ router.get('/:id', requireAuth, async (req, res) => {
         type: 'NotFoundError'
       });
     }
-    res.json(model);
+    res.json(mapModelToUi(model));
   } catch (error) {
     res.status(500).json({
       error: 'Failed to fetch auto analytics model',
@@ -140,7 +193,8 @@ router.get('/:id', requireAuth, async (req, res) => {
 // POST /api/auto-analytics
 router.post('/', requireAuth, createResourceAccessMiddleware('autoanalytics', 'create'), async (req, res) => {
   try {
-    const validation = autoAnalyticsService.validateAutoAnalyticalModel(req.body);
+    const payload = mapUiToModel(req.body);
+    const validation = autoAnalyticsService.validateAutoAnalyticalModel(payload);
     
     if (!validation.isValid) {
       return res.status(400).json({
@@ -150,8 +204,8 @@ router.post('/', requireAuth, createResourceAccessMiddleware('autoanalytics', 'c
       });
     }
 
-    const newModel = await saveAutoAnalyticsModel(req.body);
-    res.status(201).json(newModel);
+    const newModel = await saveAutoAnalyticsModel(payload);
+    res.status(201).json(mapModelToUi(newModel));
   } catch (error) {
     res.status(500).json({
       error: 'Failed to create auto analytics model',
@@ -163,7 +217,8 @@ router.post('/', requireAuth, createResourceAccessMiddleware('autoanalytics', 'c
 // PUT /api/auto-analytics/:id
 router.put('/:id', requireAuth, createResourceAccessMiddleware('autoanalytics', 'update'), async (req, res) => {
   try {
-    const validation = autoAnalyticsService.validateAutoAnalyticalModel(req.body);
+    const payload = mapUiToModel(req.body);
+    const validation = autoAnalyticsService.validateAutoAnalyticalModel(payload);
     
     if (!validation.isValid) {
       return res.status(400).json({
@@ -173,7 +228,7 @@ router.put('/:id', requireAuth, createResourceAccessMiddleware('autoanalytics', 
       });
     }
 
-    const updatedModel = await updateAutoAnalyticsModelInDb(req.params.id, req.body);
+    const updatedModel = await updateAutoAnalyticsModelInDb(req.params.id, payload);
     
     if (!updatedModel) {
       return res.status(404).json({
@@ -182,7 +237,7 @@ router.put('/:id', requireAuth, createResourceAccessMiddleware('autoanalytics', 
       });
     }
 
-    res.json(updatedModel);
+    res.json(mapModelToUi(updatedModel));
   } catch (error) {
     res.status(500).json({
       error: 'Failed to update auto analytics model',

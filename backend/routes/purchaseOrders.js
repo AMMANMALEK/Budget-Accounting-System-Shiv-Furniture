@@ -4,6 +4,95 @@ const { createResourceAccessMiddleware } = require('../middleware/accessControlM
 
 const router = express.Router();
 
+const normalizeStatusFromUi = (status) => {
+  if (!status) return 'pending';
+  const s = status.toString().toLowerCase();
+  if (s === 'draft') return 'pending';
+  if (s === 'issued') return 'pending';
+  if (s === 'received') return 'completed';
+  if (s === 'cancelled') return 'cancelled';
+  return s;
+};
+
+const normalizeStatusForUi = (status) => {
+  if (!status) return 'Draft';
+  const s = status.toString().toLowerCase();
+  if (s === 'pending') return 'Draft';
+  if (s === 'confirmed') return 'Issued';
+  if (s === 'completed') return 'Received';
+  if (s === 'cancelled') return 'Cancelled';
+  return status;
+};
+
+const mapItemsFromUi = (items = []) => {
+  if (!Array.isArray(items)) return [];
+  return items.map((it) => {
+    const quantity = Number(it.quantity) || 0;
+    const unitPrice = Number(it.unitPrice ?? it.price) || 0;
+    return {
+      productId: it.productId,
+      productName: it.productName,
+      quantity,
+      unitPrice,
+      totalPrice: Number(it.totalPrice ?? it.total) || quantity * unitPrice
+    };
+  });
+};
+
+const mapPurchaseOrderToUi = (po) => {
+  if (!po) return po;
+  return {
+    id: po.id,
+    poNumber: po.poNumber || po.orderNumber,
+    vendorId: po.vendorId || po.supplierId,
+    vendorName: po.vendorName,
+    costCenterId: po.costCenterId,
+    costCenterName: po.costCenterName,
+    budgetId: po.budgetId,
+    budgetName: po.budgetName,
+    date: po.date || po.orderDate,
+    deliveryDate: po.deliveryDate || po.expectedDeliveryDate,
+    status: po.statusUi || normalizeStatusForUi(po.status),
+    totalAmount: po.totalAmount,
+    items: (po.items || []).map((it) => ({
+      productId: it.productId,
+      productName: it.productName,
+      quantity: it.quantity,
+      unitPrice: it.unitPrice ?? it.unitPrice,
+      total: it.totalPrice ?? it.total
+    }))
+  };
+};
+
+const mapUiToPurchaseOrder = (payload = {}) => {
+  const poNumber = payload.poNumber || payload.orderNumber;
+  const vendorId = payload.vendorId || payload.supplierId;
+  const costCenterId = payload.costCenterId;
+  const items = mapItemsFromUi(payload.items || []);
+  const totalAmount = items.reduce((sum, item) => sum + (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0), 0);
+
+  return {
+    orderNumber: poNumber,
+    poNumber,
+    supplierId: vendorId,
+    vendorId,
+    vendorName: payload.vendorName,
+    costCenterId,
+    costCenterName: payload.costCenterName,
+    budgetId: payload.budgetId,
+    budgetName: payload.budgetName,
+    orderDate: payload.date || payload.orderDate,
+    date: payload.date || payload.orderDate,
+    expectedDeliveryDate: payload.deliveryDate || payload.expectedDeliveryDate,
+    deliveryDate: payload.deliveryDate || payload.expectedDeliveryDate,
+    statusUi: payload.status,
+    status: normalizeStatusFromUi(payload.status || payload.statusUi || payload.status_backend),
+    description: payload.description || '',
+    items,
+    totalAmount
+  };
+};
+
 // Mock database functions
 let mockPurchaseOrders = [
   {
@@ -89,7 +178,10 @@ router.get('/', requireAuth, async (req, res) => {
   try {
     const { page = 0, limit = 10, search = '' } = req.query;
     const result = await getAllPurchaseOrders(parseInt(page), parseInt(limit), search);
-    res.json(result);
+    res.json({
+      ...result,
+      data: (result.data || []).map(mapPurchaseOrderToUi)
+    });
   } catch (error) {
     res.status(500).json({
       error: 'Failed to fetch purchase orders',
@@ -108,7 +200,7 @@ router.get('/:id', requireAuth, async (req, res) => {
         type: 'NotFoundError'
       });
     }
-    res.json(purchaseOrder);
+    res.json(mapPurchaseOrderToUi(purchaseOrder));
   } catch (error) {
     res.status(500).json({
       error: 'Failed to fetch purchase order',
@@ -121,7 +213,8 @@ router.get('/:id', requireAuth, async (req, res) => {
 router.post('/', requireAuth, createResourceAccessMiddleware('purchaseorder', 'create'), async (req, res) => {
   try {
     // Basic validation
-    const { supplierId, costCenterId, items } = req.body;
+    const payload = mapUiToPurchaseOrder(req.body);
+    const { supplierId, costCenterId, items } = payload;
     
     if (!supplierId || !costCenterId || !items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({
@@ -132,14 +225,13 @@ router.post('/', requireAuth, createResourceAccessMiddleware('purchaseorder', 'c
 
     // Calculate total amount
     const totalAmount = items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
-    
     const purchaseOrderData = {
-      ...req.body,
+      ...payload,
       totalAmount
     };
 
     const newPurchaseOrder = await savePurchaseOrder(purchaseOrderData);
-    res.status(201).json(newPurchaseOrder);
+    res.status(201).json(mapPurchaseOrderToUi(newPurchaseOrder));
   } catch (error) {
     res.status(500).json({
       error: 'Failed to create purchase order',
@@ -168,13 +260,14 @@ router.put('/:id', requireAuth, createResourceAccessMiddleware('purchaseorder', 
     }
 
     // Recalculate total if items are updated
-    let updateData = { ...req.body };
-    if (req.body.items) {
-      updateData.totalAmount = req.body.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+    const payload = mapUiToPurchaseOrder(req.body);
+    let updateData = { ...payload };
+    if (payload.items) {
+      updateData.totalAmount = payload.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
     }
 
     const updatedPurchaseOrder = await updatePurchaseOrderInDb(req.params.id, updateData);
-    res.json(updatedPurchaseOrder);
+    res.json(mapPurchaseOrderToUi(updatedPurchaseOrder));
   } catch (error) {
     res.status(500).json({
       error: 'Failed to update purchase order',
@@ -202,7 +295,7 @@ router.post('/:id/confirm', requireAuth, createResourceAccessMiddleware('purchas
     }
 
     const updatedPurchaseOrder = await updatePurchaseOrderInDb(req.params.id, { status: 'confirmed' });
-    res.json(updatedPurchaseOrder);
+    res.json(mapPurchaseOrderToUi(updatedPurchaseOrder));
   } catch (error) {
     res.status(500).json({
       error: 'Failed to confirm purchase order',

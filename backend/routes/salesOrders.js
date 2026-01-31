@@ -4,6 +4,80 @@ const { createResourceAccessMiddleware } = require('../middleware/accessControlM
 
 const router = express.Router();
 
+const normalizeStatusFromUi = (status) => {
+  if (!status) return 'pending';
+  const s = status.toString().toLowerCase();
+  if (s === 'draft') return 'pending';
+  if (s === 'confirmed') return 'pending';
+  if (s === 'shipped') return 'completed';
+  if (s === 'cancelled') return 'cancelled';
+  return s;
+};
+
+const mapItemsFromUi = (items = []) => {
+  if (!Array.isArray(items)) return [];
+  return items.map((it) => {
+    const quantity = Number(it.quantity) || 0;
+    const unitPrice = Number(it.unitPrice ?? it.price) || 0;
+    return {
+      productId: it.productId,
+      productName: it.productName,
+      quantity,
+      unitPrice,
+      totalPrice: Number(it.totalPrice ?? it.total) || quantity * unitPrice
+    };
+  });
+};
+
+const mapSalesOrderToUi = (so) => {
+  if (!so) return so;
+  return {
+    id: so.id,
+    soNumber: so.soNumber || so.orderNumber,
+    customerId: so.customerId,
+    customerName: so.customerName,
+    date: so.date || so.orderDate,
+    deliveryDate: so.deliveryDate || so.expectedDeliveryDate,
+    status: so.statusUi || so.status || 'Draft',
+    subtotal: so.subtotal,
+    tax: so.tax,
+    totalAmount: so.totalAmount,
+    items: (so.items || []).map((it) => ({
+      productId: it.productId,
+      productName: it.productName,
+      quantity: it.quantity,
+      unitPrice: it.unitPrice,
+      total: it.totalPrice
+    }))
+  };
+};
+
+const mapUiToSalesOrder = (payload = {}) => {
+  const soNumber = payload.soNumber || payload.orderNumber;
+  const items = mapItemsFromUi(payload.items || []);
+  const subtotal = items.reduce((sum, item) => sum + (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0), 0);
+  const tax = Number(payload.tax) || 0;
+  const totalAmount = Number(payload.totalAmount) || subtotal + tax;
+
+  return {
+    orderNumber: soNumber,
+    soNumber,
+    customerId: payload.customerId,
+    customerName: payload.customerName,
+    orderDate: payload.date || payload.orderDate,
+    date: payload.date || payload.orderDate,
+    expectedDeliveryDate: payload.deliveryDate || payload.expectedDeliveryDate,
+    deliveryDate: payload.deliveryDate || payload.expectedDeliveryDate,
+    statusUi: payload.status,
+    status: normalizeStatusFromUi(payload.status),
+    items,
+    subtotal,
+    tax,
+    totalAmount,
+    description: payload.description || ''
+  };
+};
+
 // Mock database functions
 let mockSalesOrders = [
   {
@@ -89,7 +163,10 @@ router.get('/', requireAuth, async (req, res) => {
   try {
     const { page = 0, limit = 10, search = '' } = req.query;
     const result = await getAllSalesOrders(parseInt(page), parseInt(limit), search);
-    res.json(result);
+    res.json({
+      ...result,
+      data: (result.data || []).map(mapSalesOrderToUi)
+    });
   } catch (error) {
     res.status(500).json({
       error: 'Failed to fetch sales orders',
@@ -108,7 +185,7 @@ router.get('/:id', requireAuth, async (req, res) => {
         type: 'NotFoundError'
       });
     }
-    res.json(salesOrder);
+    res.json(mapSalesOrderToUi(salesOrder));
   } catch (error) {
     res.status(500).json({
       error: 'Failed to fetch sales order',
@@ -120,12 +197,13 @@ router.get('/:id', requireAuth, async (req, res) => {
 // POST /api/sales-orders
 router.post('/', requireAuth, createResourceAccessMiddleware('salesorder', 'create'), async (req, res) => {
   try {
+    const payload = mapUiToSalesOrder(req.body);
     // Basic validation
-    const { customerId, costCenterId, items } = req.body;
+    const { customerId, items } = payload;
     
-    if (!customerId || !costCenterId || !items || !Array.isArray(items) || items.length === 0) {
+    if (!customerId || !items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({
-        error: 'Customer ID, Cost Center ID, and items are required',
+        error: 'Customer ID and items are required',
         type: 'ValidationError'
       });
     }
@@ -134,12 +212,12 @@ router.post('/', requireAuth, createResourceAccessMiddleware('salesorder', 'crea
     const totalAmount = items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
     
     const salesOrderData = {
-      ...req.body,
+      ...payload,
       totalAmount
     };
 
     const newSalesOrder = await saveSalesOrder(salesOrderData);
-    res.status(201).json(newSalesOrder);
+    res.status(201).json(mapSalesOrderToUi(newSalesOrder));
   } catch (error) {
     res.status(500).json({
       error: 'Failed to create sales order',
@@ -167,14 +245,14 @@ router.put('/:id', requireAuth, createResourceAccessMiddleware('salesorder', 'up
       });
     }
 
-    // Recalculate total if items are updated
-    let updateData = { ...req.body };
-    if (req.body.items) {
-      updateData.totalAmount = req.body.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+    const payload = mapUiToSalesOrder(req.body);
+    let updateData = { ...payload };
+    if (payload.items) {
+      updateData.totalAmount = payload.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
     }
 
     const updatedSalesOrder = await updateSalesOrderInDb(req.params.id, updateData);
-    res.json(updatedSalesOrder);
+    res.json(mapSalesOrderToUi(updatedSalesOrder));
   } catch (error) {
     res.status(500).json({
       error: 'Failed to update sales order',
@@ -202,7 +280,7 @@ router.post('/:id/confirm', requireAuth, createResourceAccessMiddleware('salesor
     }
 
     const updatedSalesOrder = await updateSalesOrderInDb(req.params.id, { status: 'confirmed' });
-    res.json(updatedSalesOrder);
+    res.json(mapSalesOrderToUi(updatedSalesOrder));
   } catch (error) {
     res.status(500).json({
       error: 'Failed to confirm sales order',

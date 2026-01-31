@@ -6,6 +6,47 @@ const { createResourceAccessMiddleware } = require('../middleware/accessControlM
 
 const router = express.Router();
 
+const mapPurchaseBillToUi = (bill) => {
+  if (!bill) return bill;
+  return {
+    id: bill.id,
+    billNumber: bill.billNumber || bill.reference || `PB-${bill.id}`,
+    poId: bill.poId || bill.purchaseOrderId || '',
+    poNumber: bill.poNumber || '',
+    vendorId: bill.vendorId || bill.supplierId || '',
+    vendorName: bill.vendorName || '',
+    date: bill.date || bill.billDate,
+    dueDate: bill.dueDate,
+    amount: bill.amount,
+    status: bill.statusUi || bill.status || 'draft'
+  };
+};
+
+const mapUiToPurchaseBill = (payload = {}) => {
+  const amount = Number(payload.amount) || 0;
+  const vendorId = payload.vendorId || payload.supplierId || payload.vendor_id;
+  const billNumber = payload.billNumber || payload.reference;
+
+  return {
+    // UI fields we want to preserve in mock store
+    billNumber,
+    poId: payload.poId || payload.purchaseOrderId || payload.po_id,
+    poNumber: payload.poNumber,
+    vendorId,
+    vendorName: payload.vendorName,
+    date: payload.date,
+    dueDate: payload.dueDate,
+    statusUi: payload.status,
+
+    // Backend service required fields
+    costCenterId: payload.costCenterId || 1,
+    amount,
+    description: (payload.description || `${billNumber || 'Bill'}${payload.vendorName ? ` - ${payload.vendorName}` : ''}` || 'Purchase Bill').toString(),
+    billDate: payload.date || payload.billDate,
+    supplierId: vendorId || null
+  };
+};
+
 // Mock database functions
 let mockPurchaseBills = [
   {
@@ -100,7 +141,10 @@ router.get('/', requireAuth, async (req, res) => {
   try {
     const { page = 0, limit = 10, search = '' } = req.query;
     const result = await getAllPurchaseBills(parseInt(page), parseInt(limit), search);
-    res.json(result);
+    res.json({
+      ...result,
+      data: (result.data || []).map(mapPurchaseBillToUi)
+    });
   } catch (error) {
     res.status(500).json({
       error: 'Failed to fetch purchase bills',
@@ -119,7 +163,7 @@ router.get('/:id', requireAuth, async (req, res) => {
         type: 'NotFoundError'
       });
     }
-    res.json(purchaseBill);
+    res.json(mapPurchaseBillToUi(purchaseBill));
   } catch (error) {
     res.status(500).json({
       error: 'Failed to fetch purchase bill',
@@ -131,7 +175,8 @@ router.get('/:id', requireAuth, async (req, res) => {
 // POST /api/purchase-bills
 router.post('/', requireAuth, createResourceAccessMiddleware('purchasebill', 'create'), async (req, res) => {
   try {
-    const result = await purchaseBillService.createPurchaseBill(req.body, savePurchaseBill);
+    const payload = mapUiToPurchaseBill(req.body);
+    const result = await purchaseBillService.createPurchaseBill(payload, savePurchaseBill);
     
     if (!result.success) {
       return res.status(result.statusCode || 400).json({
@@ -155,7 +200,7 @@ router.post('/', requireAuth, createResourceAccessMiddleware('purchasebill', 'cr
       console.warn('Auto analytics failed:', analyticsError.message);
     }
 
-    res.status(201).json(result.purchaseBill);
+    res.status(201).json(mapPurchaseBillToUi(result.data || result.purchaseBill));
   } catch (error) {
     res.status(500).json({
       error: 'Failed to create purchase bill',
@@ -167,9 +212,10 @@ router.post('/', requireAuth, createResourceAccessMiddleware('purchasebill', 'cr
 // PUT /api/purchase-bills/:id
 router.put('/:id', requireAuth, createResourceAccessMiddleware('purchasebill', 'update'), async (req, res) => {
   try {
+    const payload = mapUiToPurchaseBill(req.body);
     const validation = await purchaseBillService.validatePurchaseBillUpdate(
       req.params.id,
-      req.body,
+      payload,
       getPurchaseBillById
     );
     
@@ -181,8 +227,8 @@ router.put('/:id', requireAuth, createResourceAccessMiddleware('purchasebill', '
       });
     }
 
-    const updatedPurchaseBill = await updatePurchaseBillInDb(req.params.id, req.body);
-    res.json(updatedPurchaseBill);
+    const updatedPurchaseBill = await updatePurchaseBillInDb(req.params.id, payload);
+    res.json(mapPurchaseBillToUi(updatedPurchaseBill));
   } catch (error) {
     res.status(500).json({
       error: 'Failed to update purchase bill',
@@ -207,7 +253,7 @@ router.post('/:id/post', requireAuth, createResourceAccessMiddleware('purchasebi
       });
     }
 
-    res.json(result.purchaseBill);
+    res.json(mapPurchaseBillToUi(result.data || result.purchaseBill));
   } catch (error) {
     res.status(500).json({
       error: 'Failed to post purchase bill',
