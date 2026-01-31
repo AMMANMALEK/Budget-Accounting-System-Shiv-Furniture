@@ -38,39 +38,39 @@ const BudgetVsActual = () => {
 
   const columns = [
     { id: 'category', label: 'Category', minWidth: 150 },
-    { 
-      id: 'budget', 
-      label: 'Budget', 
-      minWidth: 120, 
-      format: (value) => `$${value.toLocaleString()}` 
+    {
+      id: 'budget',
+      label: 'Budget',
+      minWidth: 120,
+      format: (value) => `$${(value || 0).toLocaleString()}`
     },
-    { 
-      id: 'actual', 
-      label: 'Actual Spend', 
-      minWidth: 120, 
-      format: (value) => `$${value.toLocaleString()}` 
+    {
+      id: 'actual',
+      label: 'Actual Spend',
+      minWidth: 120,
+      format: (value) => `$${(value || 0).toLocaleString()}`
     },
-    { 
-      id: 'variance', 
-      label: 'Variance', 
-      minWidth: 120, 
+    {
+      id: 'variance',
+      label: 'Variance',
+      minWidth: 120,
       format: (value) => (
-        <span style={{ color: value >= 0 ? 'green' : 'red', fontWeight: 'bold' }}>
-          {value >= 0 ? '+' : ''}{`$${value.toLocaleString()}`}
+        <span style={{ color: (value || 0) >= 0 ? 'green' : 'red', fontWeight: 'bold' }}>
+          {(value || 0) >= 0 ? '+' : ''}{`$${(value || 0).toLocaleString()}`}
         </span>
       )
     },
-    { 
-      id: 'utilization', 
-      label: 'Utilization', 
+    {
+      id: 'utilization',
+      label: 'Utilization',
       minWidth: 100,
-      format: (value) => `${value}%`
+      format: (value) => `${value || 0}%`
     },
-    { 
-      id: 'status', 
-      label: 'Status', 
+    {
+      id: 'status',
+      label: 'Status',
       minWidth: 120,
-      format: (value) => <StatusBadge status={value} />
+      format: (value) => <StatusBadge status={value || 'Unknown'} />
     }
   ];
 
@@ -91,8 +91,8 @@ const BudgetVsActual = () => {
             <MenuItem value="last_quarter">Last Quarter</MenuItem>
             <MenuItem value="this_year">This Year</MenuItem>
           </TextField>
-          <Button 
-            variant="outlined" 
+          <Button
+            variant="outlined"
             startIcon={<Download />}
             onClick={handleExport}
           >
@@ -110,13 +110,13 @@ const BudgetVsActual = () => {
             </Grid>
           ))
         ) : (
-          data?.kpi.map((kpi, index) => (
+          data?.kpi?.map((kpi, index) => (
             <Grid item xs={12} sm={6} md={3} key={index}>
-              <KPICard 
-                title={kpi.title} 
-                value={kpi.value} 
-                change={kpi.change} 
-                trend={kpi.trend} 
+              <KPICard
+                title={kpi.title}
+                value={kpi.value}
+                change={kpi.change}
+                trend={kpi.trend}
               />
             </Grid>
           ))
@@ -147,9 +147,9 @@ const BudgetVsActual = () => {
 
       {/* Detailed Table */}
       <ChartCard title="Category Breakdown" loading={loading} height="auto">
-        <DataTable 
-          columns={columns} 
-          data={data?.categoryData || []} 
+        <DataTable
+          columns={columns}
+          data={data?.categoryData || []}
           loading={loading}
           rowsPerPage={10}
         />

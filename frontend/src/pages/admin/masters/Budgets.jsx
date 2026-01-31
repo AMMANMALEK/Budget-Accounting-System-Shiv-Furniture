@@ -14,7 +14,7 @@ const Budgets = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   const [openModal, setOpenModal] = useState(false);
   const [modalMode, setModalMode] = useState('create');
   const [selectedItem, setSelectedItem] = useState(null);
@@ -98,17 +98,33 @@ const Budgets = () => {
 
   const columns = [
     { id: 'name', label: 'Budget Name', minWidth: 170 },
-    { id: 'period', label: 'Period', minWidth: 130 },
-    { id: 'amount', label: 'Total Amount', minWidth: 130, 
-      format: (value) => `$${parseInt(value).toLocaleString()}` 
+    {
+      id: 'period', label: 'Period', minWidth: 130,
+      format: (_, row) => {
+        if (row.date_from && row.date_to) {
+          const start = new Date(row.date_from).toLocaleDateString();
+          const end = new Date(row.date_to).toLocaleDateString();
+          return `${start} - ${end}`;
+        }
+        return 'N/A';
+      }
     },
-    { id: 'allocated', label: 'Utilization', minWidth: 200,
+    {
+      id: 'total_planned_amount', label: 'Total Amount', minWidth: 130,
+      format: (value) => value ? `$${parseInt(value).toLocaleString()}` : '$0'
+    },
+    {
+      id: 'allocated', label: 'Utilization', minWidth: 200,
       format: (value, row) => {
-        const percentage = Math.min((value / row.amount) * 100, 100);
+        const amount = row.total_planned_amount || 0;
+        const utilized = value || 0;
+        // Note: Backend might not return allocated/utilization yet. Using mock or 0 safe check.
+        const percentage = amount > 0 ? Math.min((utilized / amount) * 100, 100) : 0;
+
         return (
           <Box sx={{ width: '100%' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-              <Typography variant="caption">${value.toLocaleString()}</Typography>
+              <Typography variant="caption">${utilized.toLocaleString()}</Typography>
               <Typography variant="caption">{percentage.toFixed(0)}%</Typography>
             </Box>
             <LinearProgress variant="determinate" value={percentage} color={percentage > 90 ? "error" : "primary"} />
@@ -116,12 +132,13 @@ const Budgets = () => {
         );
       }
     },
-    { id: 'status', label: 'Status', minWidth: 100,
+    {
+      id: 'state', label: 'Status', minWidth: 100,
       format: (value) => (
-        <Chip 
-          label={value} 
-          size="small" 
-          color={value === 'Approved' ? 'success' : value === 'Active' ? 'primary' : 'default'} 
+        <Chip
+          label={value || 'Unknown'}
+          size="small"
+          color={value === 'Approved' ? 'success' : value === 'Active' ? 'primary' : 'default'}
         />
       )
     },
@@ -130,7 +147,7 @@ const Budgets = () => {
   return (
     <>
       <PageHeader title="Budgets" onAdd={handleAdd} buttonText="Create Budget" />
-      
+
       <DataTable
         columns={columns}
         data={data}
