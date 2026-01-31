@@ -271,7 +271,7 @@ const Budgets = () => {
     {
       id: 'period', label: 'Period', minWidth: 150,
       format: (_, row) => {
-        if (row.date_from && row.date_to) {
+        if (row && row.date_from && row.date_to) {
           return `${new Date(row.date_from).toLocaleDateString()} - ${new Date(row.date_to).toLocaleDateString()}`;
         }
         return '-';

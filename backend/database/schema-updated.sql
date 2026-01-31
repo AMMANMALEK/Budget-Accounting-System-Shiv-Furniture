@@ -60,10 +60,10 @@ CREATE TABLE IF NOT EXISTS cost_centers ( -- Backend expects 'cost_centers'
 CREATE TABLE IF NOT EXISTS budgets (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255),
-    cost_center_id INTEGER NOT NULL, -- Backend expects 'cost_center_id'
-    planned_amount NUMERIC(16,2) NOT NULL CHECK (planned_amount > 0), -- Backend expects single amount
-    start_date DATE NOT NULL, -- Backend expects 'start_date'
-    end_date DATE NOT NULL, -- Backend expects 'end_date'
+    cost_center_id INTEGER, -- Nullable as it might be defined in lines
+    planned_amount NUMERIC(16,2) NOT NULL DEFAULT 0,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
     description TEXT,
     state VARCHAR(20) DEFAULT 'draft' CHECK (state IN ('draft', 'active', 'closed')),
     revision_no INTEGER DEFAULT 0,
@@ -73,6 +73,23 @@ CREATE TABLE IF NOT EXISTS budgets (
         FOREIGN KEY (cost_center_id) REFERENCES cost_centers(id),
     CONSTRAINT chk_budget_dates
         CHECK (start_date <= end_date)
+);
+
+-- =====================================================
+-- 4.1. BUDGET LINES (Added for multi-line support)
+-- =====================================================
+CREATE TABLE IF NOT EXISTS budget_lines (
+    id SERIAL PRIMARY KEY,
+    budget_id INTEGER NOT NULL,
+    cost_center_id INTEGER NOT NULL,
+    planned_amount NUMERIC(16,2) NOT NULL DEFAULT 0,
+    achieved_amount NUMERIC(16,2) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_budget_line_budget
+        FOREIGN KEY (budget_id) REFERENCES budgets(id) ON DELETE CASCADE,
+    CONSTRAINT fk_budget_line_cost_center
+        FOREIGN KEY (cost_center_id) REFERENCES cost_centers(id)
 );
 
 -- =====================================================

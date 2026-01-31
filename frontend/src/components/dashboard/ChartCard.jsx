@@ -19,7 +19,7 @@ const ChartCard = ({ title, children, loading, height = 400 }) => {
         {loading ? (
           <Skeleton variant="rectangular" width="100%" height={height} sx={{ borderRadius: 2 }} />
         ) : (
-          <Box sx={{ width: '100%', height: height }}>
+          <Box sx={{ width: '100%', height: height, minWidth: 0, '& .recharts-responsive-container': { minWidth: 0 } }}>
             {children}
           </Box>
         )}

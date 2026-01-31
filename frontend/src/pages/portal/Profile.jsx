@@ -113,7 +113,7 @@ const Profile = () => {
       <PageHeader title="My Profile" subtitle="Manage your account information" />
 
       <Grid container spacing={3}>
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Card sx={{ borderRadius: 3, boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.05)', textAlign: 'center', p: 3 }}>
             <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
               <Avatar sx={{ width: 100, height: 100, bgcolor: 'primary.main', fontSize: '2.5rem' }}>
@@ -132,13 +132,13 @@ const Profile = () => {
                 <strong>Member Since:</strong> Jan 2024
               </Typography>
               <Typography variant="body2" color="text.secondary" gutterBottom>
-                <strong>Account ID:</strong> #{profile.id?.toString().padStart(6, '0')}
+                <strong>Account ID:</strong> #{(profile.id || '').toString().padStart(6, '0')}
               </Typography>
             </Box>
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={8}>
+        <Grid size={{ xs: 12, md: 8 }}>
           <Card sx={{ borderRadius: 3, boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.05)' }}>
             <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
               <Tabs value={activeTab} onChange={handleTabChange} aria-label="profile tabs">
@@ -161,60 +161,60 @@ const Profile = () => {
                     Edit Personal Details
                   </Typography>
                   <Grid container spacing={3}>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
                         label="Company Name"
                         name="name"
-                        value={profile.name}
+                        value={profile.name || ''}
                         onChange={handleChange}
                         disabled={loading}
                       />
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
                         label="Tax ID / VAT"
                         name="taxId"
-                        value={profile.taxId}
+                        value={profile.taxId || ''}
                         onChange={handleChange}
                         disabled={loading}
                       />
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
                         label="Email Address"
                         name="email"
                         type="email"
-                        value={profile.email}
+                        value={profile.email || ''}
                         onChange={handleChange}
                         disabled={loading}
                       />
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
                         label="Phone Number"
                         name="phone"
-                        value={profile.phone}
+                        value={profile.phone || ''}
                         onChange={handleChange}
                         disabled={loading}
                       />
                     </Grid>
-                    <Grid item xs={12}>
+                    <Grid size={{ xs: 12 }}>
                       <TextField
                         fullWidth
                         label="Billing Address"
                         name="address"
-                        value={profile.address}
+                        value={profile.address || ''}
                         onChange={handleChange}
                         multiline
                         rows={3}
                         disabled={loading}
                       />
                     </Grid>
-                    <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <Grid size={{ xs: 12 }} sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                       <Button 
                         type="submit" 
                         variant="contained" 
@@ -236,7 +236,7 @@ const Profile = () => {
                     Change Password
                   </Typography>
                   <Grid container spacing={3}>
-                    <Grid item xs={12}>
+                    <Grid size={{ xs: 12 }}>
                       <TextField
                         fullWidth
                         label="Current Password"
@@ -247,7 +247,7 @@ const Profile = () => {
                         disabled={loading}
                       />
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
                         label="New Password"
@@ -258,7 +258,7 @@ const Profile = () => {
                         disabled={loading}
                       />
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
                         label="Confirm New Password"
@@ -269,7 +269,7 @@ const Profile = () => {
                         disabled={loading}
                       />
                     </Grid>
-                    <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <Grid size={{ xs: 12 }} sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                       <Button 
                         type="submit" 
                         variant="contained" 
@@ -291,7 +291,7 @@ const Profile = () => {
                     Notification Preferences
                   </Typography>
                   <Grid container spacing={3}>
-                    <Grid item xs={12}>
+                    <Grid size={{ xs: 12 }}>
                       <FormControlLabel
                         control={
                           <Switch 
@@ -306,7 +306,7 @@ const Profile = () => {
                         Receive emails about new invoices, order updates, and payment confirmations.
                       </Typography>
                     </Grid>
-                    <Grid item xs={12}>
+                    <Grid size={{ xs: 12 }}>
                       <FormControlLabel
                         control={
                           <Switch 
@@ -321,7 +321,7 @@ const Profile = () => {
                         Receive marketing updates, product announcements, and promotional offers.
                       </Typography>
                     </Grid>
-                    <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+                    <Grid size={{ xs: 12 }} sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
                       <Button 
                         variant="contained" 
                         onClick={handleSubmit}

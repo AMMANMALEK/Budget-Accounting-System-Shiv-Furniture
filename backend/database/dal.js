@@ -102,9 +102,10 @@ const budgetDAL = {
       params.push(`%${search}%`);
     }
 
+    // Adjusted for schema-updated.sql (SERIAL, cost_centers, budget_lines)
     const countQuery = `
       SELECT COUNT(*) FROM budgets b 
-      JOIN analytic_accounts aa ON b.analytic_account_id = aa.id 
+      LEFT JOIN cost_centers cc ON b.cost_center_id = cc.id 
       ${whereClause}
     `;
     const countResult = await query(countQuery, params);
@@ -112,13 +113,15 @@ const budgetDAL = {
 
     params.push(limit, offset);
     const dataQuery = `
-      SELECT b.*, aa.name as analytic_account_name,
-             COALESCE(SUM(bl.planned_amount), 0) as total_planned_amount
+      SELECT b.*, cc.name as analytic_account_name,
+             b.start_date as date_from, b.end_date as date_to,
+             b.cost_center_id as analytic_account_id,
+             COALESCE(SUM(bl.planned_amount), b.planned_amount) as total_planned_amount
       FROM budgets b 
-      JOIN analytic_accounts aa ON b.analytic_account_id = aa.id 
+      LEFT JOIN cost_centers cc ON b.cost_center_id = cc.id 
       LEFT JOIN budget_lines bl ON b.id = bl.budget_id
       ${whereClause} 
-      GROUP BY b.id, aa.name
+      GROUP BY b.id, cc.name
       ORDER BY b.created_at DESC 
       LIMIT $${params.length - 1} OFFSET $${params.length}
     `;
@@ -134,15 +137,35 @@ const budgetDAL = {
   },
 
   async getById(id) {
+    // Adjusted for schema-updated.sql
     const result = await query(`
-      SELECT b.*, aa.name as analytic_account_name,
-             COALESCE(SUM(bl.planned_amount), 0) as total_planned_amount
+      SELECT b.*, cc.name as analytic_account_name,
+             b.start_date as date_from, b.end_date as date_to,
+             b.cost_center_id as analytic_account_id,
+             COALESCE(SUM(bl.planned_amount), b.planned_amount) as total_planned_amount,
+             json_agg(
+                json_build_object(
+                    'id', bl.id,
+                    'budgetedAmount', bl.planned_amount,
+                    'achievedAmount', bl.achieved_amount,
+                    'analyticId', bl.cost_center_id,
+                    'analyticName', cc_line.name
+                )
+             ) as "analyticLines"
       FROM budgets b 
-      JOIN analytic_accounts aa ON b.analytic_account_id = aa.id 
+      LEFT JOIN cost_centers cc ON b.cost_center_id = cc.id 
       LEFT JOIN budget_lines bl ON b.id = bl.budget_id
+      LEFT JOIN cost_centers cc_line ON bl.cost_center_id = cc_line.id
       WHERE b.id = $1
-      GROUP BY b.id, aa.name
+      GROUP BY b.id, cc.name
     `, [id]);
+    
+    if (result.rows[0]) {
+        // Fix up analyticLines if they are null (from left join)
+        if (result.rows[0].analyticLines && result.rows[0].analyticLines[0] && result.rows[0].analyticLines[0].id === null) {
+            result.rows[0].analyticLines = [];
+        }
+    }
     return result.rows[0];
   },
 
@@ -151,25 +174,68 @@ const budgetDAL = {
     try {
       await client.query('BEGIN');
 
-      // Create budget header
-      const { name, analytic_account_id, date_from, date_to, planned_amount } = budgetData;
+      // 1. Parse Analytic Lines
+      let lines = [];
+      if (budgetData.analyticLines) {
+          if (typeof budgetData.analyticLines === 'string') {
+              try { lines = JSON.parse(budgetData.analyticLines); } catch(e) { lines = []; }
+          } else if (Array.isArray(budgetData.analyticLines)) {
+              lines = budgetData.analyticLines;
+          }
+      }
+
+      // 2. Determine Header Values
+      // Use provided analytic_account_id (mapped to cost_center_id) or fallback to first line's analyticId
+      let costCenterId = budgetData.analytic_account_id || budgetData.cost_center_id;
+      if (!costCenterId && lines.length > 0) {
+          costCenterId = lines[0].analyticId;
+      }
+      // If still null, we might insert NULL if schema allows (we made it nullable)
+
+      const { name, date_from, date_to } = budgetData;
+      // Recalculate planned amount from lines if possible
+      let plannedAmount = budgetData.planned_amount || 0;
+      if (lines.length > 0) {
+          const sum = lines.reduce((acc, line) => acc + (Number(line.budgetedAmount) || 0), 0);
+          if (sum > 0) plannedAmount = sum;
+      }
+
+      // 3. Insert Budget Header
       const budgetResult = await client.query(
-        'INSERT INTO budgets (name, analytic_account_id, date_from, date_to, state) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-        [name, analytic_account_id, date_from, date_to, 'DRAFT']
+        'INSERT INTO budgets (name, cost_center_id, start_date, end_date, planned_amount, state) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+        [name, costCenterId, date_from, date_to, plannedAmount, 'draft']
       );
 
       const budget = budgetResult.rows[0];
 
-      // Create budget line
-      await client.query(
-        'INSERT INTO budget_lines (budget_id, planned_amount) VALUES ($1, $2)',
-        [budget.id, planned_amount]
-      );
+      // 4. Insert Budget Lines
+      if (lines.length > 0) {
+          for (const line of lines) {
+              await client.query(
+                'INSERT INTO budget_lines (budget_id, cost_center_id, planned_amount, achieved_amount) VALUES ($1, $2, $3, $4)',
+                [budget.id, line.analyticId, line.budgetedAmount || 0, line.achievedAmount || 0]
+              );
+          }
+      } else {
+          // Fallback: Create one line if no lines provided but we have header amount
+          if (costCenterId && plannedAmount > 0) {
+             await client.query(
+                'INSERT INTO budget_lines (budget_id, cost_center_id, planned_amount) VALUES ($1, $2, $3)',
+                [budget.id, costCenterId, plannedAmount]
+              );
+          }
+      }
 
       await client.query('COMMIT');
 
-      // Return budget with total amount
-      return { ...budget, total_planned_amount: planned_amount };
+      // Return budget with mappings
+      return { 
+          ...budget, 
+          date_from: budget.start_date, 
+          date_to: budget.end_date,
+          analytic_account_id: budget.cost_center_id,
+          total_planned_amount: plannedAmount 
+      };
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
@@ -183,35 +249,53 @@ const budgetDAL = {
     try {
       await client.query('BEGIN');
 
-      const { name, analytic_account_id, date_from, date_to, planned_amount } = updateData;
+      const { name, date_from, date_to } = updateData;
+      
+      // Parse Lines
+      let lines = [];
+      if (updateData.analyticLines) {
+          if (typeof updateData.analyticLines === 'string') {
+              try { lines = JSON.parse(updateData.analyticLines); } catch(e) { lines = []; }
+          } else if (Array.isArray(updateData.analyticLines)) {
+              lines = updateData.analyticLines;
+          }
+      }
+
+      let costCenterId = updateData.analytic_account_id || updateData.cost_center_id;
+      if (!costCenterId && lines.length > 0) costCenterId = lines[0].analyticId;
+
+      let plannedAmount = updateData.planned_amount || 0;
+      if (lines.length > 0) {
+          plannedAmount = lines.reduce((acc, line) => acc + (Number(line.budgetedAmount) || 0), 0);
+      }
 
       // Update budget header
       const budgetResult = await client.query(
-        'UPDATE budgets SET name = $1, analytic_account_id = $2, date_from = $3, date_to = $4 WHERE id = $5 RETURNING *',
-        [name, analytic_account_id, date_from, date_to, id]
+        'UPDATE budgets SET name = $1, cost_center_id = $2, start_date = $3, end_date = $4, planned_amount = $5 WHERE id = $6 RETURNING *',
+        [name, costCenterId, date_from, date_to, plannedAmount, id]
       );
 
-      if (planned_amount !== undefined) {
-        // Update or create budget line
-        const existingLine = await client.query('SELECT id FROM budget_lines WHERE budget_id = $1', [id]);
-
-        if (existingLine.rows.length > 0) {
-          await client.query(
-            'UPDATE budget_lines SET planned_amount = $1 WHERE budget_id = $2',
-            [planned_amount, id]
-          );
-        } else {
-          await client.query(
-            'INSERT INTO budget_lines (budget_id, planned_amount) VALUES ($1, $2)',
-            [id, planned_amount]
-          );
-        }
+      // Replace lines (Delete all and re-insert for simplicity)
+      if (lines.length > 0) {
+          await client.query('DELETE FROM budget_lines WHERE budget_id = $1', [id]);
+          for (const line of lines) {
+              await client.query(
+                'INSERT INTO budget_lines (budget_id, cost_center_id, planned_amount, achieved_amount) VALUES ($1, $2, $3, $4)',
+                [id, line.analyticId, line.budgetedAmount || 0, line.achievedAmount || 0]
+              );
+          }
       }
 
       await client.query('COMMIT');
 
       const budget = budgetResult.rows[0];
-      return { ...budget, total_planned_amount: planned_amount };
+      return { 
+          ...budget, 
+          date_from: budget.start_date, 
+          date_to: budget.end_date,
+          analytic_account_id: budget.cost_center_id,
+          total_planned_amount: plannedAmount 
+      };
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
@@ -225,9 +309,10 @@ const budgetDAL = {
     return result.rows[0];
   },
 
-  async getOverlapping(analyticAccountId, dateFrom, dateTo, excludeId = null) {
-    let whereClause = 'WHERE analytic_account_id = $1 AND (date_from <= $3 AND date_to >= $2)';
-    let params = [analyticAccountId, dateFrom, dateTo];
+  async getOverlapping(costCenterId, startDate, endDate, excludeId = null) {
+    if (!costCenterId) return []; // Cannot check overlap without cost center
+    let whereClause = 'WHERE cost_center_id = $1 AND (start_date <= $3 AND end_date >= $2)';
+    let params = [costCenterId, startDate, endDate];
 
     if (excludeId) {
       whereClause += ' AND id != $4';

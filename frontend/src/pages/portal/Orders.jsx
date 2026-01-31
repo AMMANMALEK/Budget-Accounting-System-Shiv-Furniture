@@ -30,16 +30,17 @@ const Orders = () => {
     try {
       setLoading(true);
       const data = await portalService.getOrders();
-      setOrders(data);
+      setOrders(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching orders:', error);
+      setOrders([]);
     } finally {
       setLoading(false);
     }
   };
 
   const filterData = () => {
-    let result = [...orders];
+    let result = Array.isArray(orders) ? [...orders] : [];
 
     if (searchTerm) {
       const lowerTerm = searchTerm.toLowerCase();
@@ -86,7 +87,7 @@ const Orders = () => {
       field: 'total', 
       headerName: 'Total', 
       minWidth: 120,
-      render: (row) => `$${row.total.toLocaleString()}`
+      render: (row) => `$${(row.total || 0).toLocaleString()}`
     },
     { 
       field: 'status', 
@@ -179,7 +180,7 @@ const Orders = () => {
                 </Box>
                 <Box sx={{ textAlign: 'right' }}>
                   <Typography variant="subtitle2" color="text.secondary">Total Amount</Typography>
-                  <Typography variant="h6" color="primary" fontWeight={700}>${selectedOrder.total.toLocaleString()}</Typography>
+                  <Typography variant="h6" color="primary" fontWeight={700}>${(selectedOrder.total || 0).toLocaleString()}</Typography>
                 </Box>
               </Box>
 
@@ -195,13 +196,13 @@ const Orders = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {selectedOrder.items?.map((item, index) => (
+                    {(selectedOrder.items || []).map((item, index) => (
                       <TableRow key={index}>
                         <TableCell>{item.product}</TableCell>
                         <TableCell align="right">{item.qty}</TableCell>
-                        <TableCell align="right">${item.price.toLocaleString()}</TableCell>
+                        <TableCell align="right">${(item.price || 0).toLocaleString()}</TableCell>
                         <TableCell align="right" sx={{ fontWeight: 600 }}>
-                          ${(item.qty * item.price).toLocaleString()}
+                          ${((item.qty || 0) * (item.price || 0)).toLocaleString()}
                         </TableCell>
                       </TableRow>
                     ))}

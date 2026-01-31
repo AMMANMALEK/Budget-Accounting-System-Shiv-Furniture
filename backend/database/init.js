@@ -24,7 +24,7 @@ async function initializeDatabase() {
     } else {
       console.log('⚠️  Missing tables:', missingTables.join(', '));
       // Read and execute schema
-      const schemaPath = path.join(__dirname, 'schema.sql');
+      const schemaPath = path.join(__dirname, 'schema-updated.sql');
       const schema = fs.readFileSync(schemaPath, 'utf8');
       
       console.log('Creating database schema...');

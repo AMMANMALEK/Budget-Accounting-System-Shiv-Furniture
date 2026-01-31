@@ -28,19 +28,40 @@ const validationService = require('./validationService');
 class BudgetService {
   // Validates budget data and returns validation result
   async validateBudget(budgetData, existingBudgets = [], excludeBudgetId = null) {
+    // Parse lines first to help with validation
+    let lines = [];
+    const hasLinesProperty = budgetData.analyticLines !== undefined && budgetData.analyticLines !== null;
+    
+    if (hasLinesProperty) {
+      if (typeof budgetData.analyticLines === 'string') {
+        try { lines = JSON.parse(budgetData.analyticLines); } catch(e) { lines = []; }
+      } else if (Array.isArray(budgetData.analyticLines)) {
+        lines = budgetData.analyticLines;
+      }
+    }
+
     // Basic validation
-    if (!budgetData.name || !budgetData.analytic_account_id || !budgetData.planned_amount) {
+    // Analytic account ID is optional ONLY if valid analyticLines are provided
+    if (!budgetData.name || (!budgetData.analytic_account_id && lines.length === 0)) {
       return {
         isValid: false,
-        errors: ['Name, analytic account, and planned amount are required'],
+        errors: ['Name is required. Analytic account or Analytic Lines are required.'],
         statusCode: 400
       };
     }
 
-    if (budgetData.planned_amount <= 0) {
+    // Calculate total amount to ensure it's positive
+    let totalAmount = Number(budgetData.planned_amount) || 0;
+    
+    if (lines.length > 0) {
+      const sum = lines.reduce((acc, line) => acc + (Number(line.budgetedAmount) || 0), 0);
+      if (sum > 0) totalAmount = sum;
+    }
+
+    if (totalAmount <= 0) {
       return {
         isValid: false,
-        errors: ['Planned amount must be positive'],
+        errors: ['Total planned amount must be positive'],
         statusCode: 400
       };
     }
@@ -98,12 +119,13 @@ class BudgetService {
         analytic_account_id: budgetData.analytic_account_id,
         date_from: budgetData.date_from,
         date_to: budgetData.date_to,
-        planned_amount: budgetData.planned_amount
+        planned_amount: budgetData.planned_amount,
+        analyticLines: budgetData.analyticLines // Pass analyticLines to DAL
       });
 
       return {
         success: true,
-        budget: budget
+        budget
       };
     } catch (error) {
       return {

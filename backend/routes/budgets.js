@@ -28,7 +28,23 @@ const parseUiPeriodToDates = (period) => {
 
 const mapUiToBudgetPayload = (payload = {}) => {
   const planned_amount = Number(payload.planned_amount ?? payload.amount ?? payload.total_planned_amount) || 0;
-  const analytic_account_id = payload.analytic_account_id ?? payload.analyticAccountId ?? payload.costCenterId ?? 1;
+  
+  let analytic_account_id = payload.analytic_account_id ?? payload.analyticAccountId ?? payload.costCenterId;
+
+  // If no top-level analytic account, try to infer from lines
+  if (!analytic_account_id && payload.analyticLines) {
+    let lines = [];
+    if (typeof payload.analyticLines === 'string') {
+      try { lines = JSON.parse(payload.analyticLines); } catch(e) { lines = []; }
+    } else if (Array.isArray(payload.analyticLines)) {
+      lines = payload.analyticLines;
+    }
+    
+    if (lines.length > 0 && lines[0].analyticId) {
+      analytic_account_id = lines[0].analyticId;
+    }
+  }
+
   const date_from = payload.date_from ?? payload.dateFrom;
   const date_to = payload.date_to ?? payload.dateTo;
 
@@ -45,7 +61,8 @@ const mapUiToBudgetPayload = (payload = {}) => {
     period: payload.period,
     amount: payload.amount,
     allocated: payload.allocated,
-    status: payload.status
+    status: payload.status,
+    analyticLines: payload.analyticLines // Pass analyticLines to service/DAL
   };
 };
 

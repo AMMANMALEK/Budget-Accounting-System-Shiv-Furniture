@@ -25,16 +25,17 @@ const Payments = () => {
     try {
       setLoading(true);
       const data = await portalService.getPayments();
-      setPayments(data);
+      setPayments(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching payments:', error);
+      setPayments([]);
     } finally {
       setLoading(false);
     }
   };
 
   const filterData = () => {
-    let result = [...payments];
+    let result = Array.isArray(payments) ? [...payments] : [];
 
     if (dateFilter) {
       result = result.filter(payment => payment.date === dateFilter);
@@ -61,7 +62,7 @@ const Payments = () => {
       field: 'amount', 
       headerName: 'Amount', 
       minWidth: 120,
-      render: (row) => `$${row.amount.toLocaleString()}`
+      render: (row) => `$${(row.amount || 0).toLocaleString()}`
     },
     { 
       field: 'status', 

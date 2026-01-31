@@ -98,7 +98,7 @@ const InvoiceDetail = () => {
 
           {/* Addresses */}
           <Grid container spacing={4} mb={4}>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                 FROM:
               </Typography>
@@ -109,7 +109,7 @@ const InvoiceDetail = () => {
                 Tax ID: US-987654321
               </Typography>
             </Grid>
-            <Grid item xs={12} md={6} sx={{ textAlign: { md: 'right' } }}>
+            <Grid size={{ xs: 12, md: 6 }} sx={{ textAlign: { md: 'right' } }}>
               <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                 BILL TO:
               </Typography>
@@ -134,12 +134,12 @@ const InvoiceDetail = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {invoice.items?.map((item) => (
+                {(invoice.items || []).map((item) => (
                   <TableRow key={item.id}>
                     <TableCell>{item.product}</TableCell>
                     <TableCell align="right">{item.qty}</TableCell>
-                    <TableCell align="right">${item.price.toFixed(2)}</TableCell>
-                    <TableCell align="right"><strong>${item.total.toFixed(2)}</strong></TableCell>
+                    <TableCell align="right">${(item.price || 0).toFixed(2)}</TableCell>
+                    <TableCell align="right"><strong>${(item.total || 0).toFixed(2)}</strong></TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -148,10 +148,10 @@ const InvoiceDetail = () => {
 
           {/* Totals */}
           <Grid container justifyContent="flex-end" spacing={2}>
-            <Grid item xs={12} sm={6} md={4}>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                 <Typography color="text.secondary">Subtotal:</Typography>
-                <Typography fontWeight={600}>${invoice.amount.toFixed(2)}</Typography>
+                <Typography fontWeight={600}>${(invoice.amount || 0).toFixed(2)}</Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                 <Typography color="text.secondary">Tax (10%):</Typography>
@@ -160,7 +160,7 @@ const InvoiceDetail = () => {
               <Divider sx={{ my: 1 }} />
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                 <Typography variant="h6">Grand Total:</Typography>
-                <Typography variant="h6" color="primary">${(invoice.grandTotal || invoice.amount).toFixed(2)}</Typography>
+                <Typography variant="h6" color="primary">${(invoice.grandTotal || invoice.amount || 0).toFixed(2)}</Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                 <Typography color="text.secondary">Amount Paid:</Typography>
@@ -191,7 +191,7 @@ const InvoiceDetail = () => {
                       <TableRow key={index}>
                         <TableCell>{payment.date}</TableCell>
                         <TableCell>{payment.method}</TableCell>
-                        <TableCell align="right">${payment.amount.toFixed(2)}</TableCell>
+                        <TableCell align="right">${(payment.amount || 0).toFixed(2)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

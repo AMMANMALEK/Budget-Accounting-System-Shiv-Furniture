@@ -296,8 +296,8 @@ const Dashboard = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {recentSales.map((row) => (
-                    <TableRow key={row.id}>
+                  {recentSales.map((row, index) => (
+                    <TableRow key={row.id || index}>
                       <TableCell>{row.id}</TableCell>
                       <TableCell>{row.customer}</TableCell>
                       <TableCell align="right">{formatCurrency(row.amount)}</TableCell>

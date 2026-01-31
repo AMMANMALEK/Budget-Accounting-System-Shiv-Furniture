@@ -29,16 +29,17 @@ const Invoices = () => {
     try {
       setLoading(true);
       const data = await portalService.getInvoices();
-      setInvoices(data);
+      setInvoices(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching invoices:', error);
+      setInvoices([]);
     } finally {
       setLoading(false);
     }
   };
 
   const filterData = () => {
-    let result = [...invoices];
+    let result = Array.isArray(invoices) ? [...invoices] : [];
 
     // Search filter
     if (searchTerm) {
@@ -85,7 +86,7 @@ const Invoices = () => {
       field: 'amount', 
       headerName: 'Total', 
       minWidth: 120,
-      render: (row) => `$${row.amount.toLocaleString()}`
+      render: (row) => `$${(row.amount || 0).toLocaleString()}`
     },
     { 
       field: 'paidAmount', 

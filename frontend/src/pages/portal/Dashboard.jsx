@@ -49,16 +49,16 @@ const PortalDashboard = () => {
 
       {/* KPI Cards */}
       <Grid container spacing={3} mb={4}>
-        <Grid item xs={12} sm={6} md={6}>
+        <Grid size={{ xs: 12, sm: 6, md: 6 }}>
           <KPICard 
             title="Outstanding Balance" 
-            value={stats ? `$${stats.outstandingBalance.toLocaleString()}` : '$0'} 
+            value={(stats && stats.outstandingBalance != null) ? `$${stats.outstandingBalance.toLocaleString()}` : '$0'} 
             loading={loading}
             icon={<AccountBalanceWallet color="error" />}
             color="error"
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={6}>
+        <Grid size={{ xs: 12, sm: 6, md: 6 }}>
           <KPICard 
             title="Open Invoices" 
             value={stats ? stats.openInvoicesCount : '0'} 
@@ -71,7 +71,7 @@ const PortalDashboard = () => {
 
       {/* Spending Trend Chart */}
       <Grid container spacing={3} mb={4}>
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <Card sx={{ borderRadius: 3, boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.05)', p: 2 }}>
             <CardContent>
               <Typography variant="h6" fontWeight={600} gutterBottom>
@@ -110,7 +110,7 @@ const PortalDashboard = () => {
       {/* Recent Orders & Payments */}
       <Grid container spacing={4}>
         {/* Recent Orders */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Card sx={{ borderRadius: 4, boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.05)', height: '100%' }}>
             <CardContent sx={{ p: 3, '&:last-child': { pb: 3 } }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -134,11 +134,11 @@ const PortalDashboard = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {stats?.recentOrders.map((order) => (
+                    {(stats?.recentOrders || []).map((order) => (
                       <TableRow key={order.id} hover sx={{ cursor: 'pointer' }} onClick={() => navigate('/portal/orders')}>
                         <TableCell sx={{ fontWeight: 500 }}>{order.number}</TableCell>
                         <TableCell>{order.date}</TableCell>
-                        <TableCell>${order.total.toLocaleString()}</TableCell>
+                        <TableCell>${(order.total || 0).toLocaleString()}</TableCell>
                         <TableCell>
                           <Chip 
                             label={order.status} 
@@ -162,7 +162,7 @@ const PortalDashboard = () => {
         </Grid>
 
         {/* Recent Payments */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Card sx={{ borderRadius: 3, boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.05)', height: '100%' }}>
             <CardContent>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -186,12 +186,12 @@ const PortalDashboard = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {stats?.recentPayments.map((payment) => (
+                    {(stats?.recentPayments || []).map((payment) => (
                       <TableRow key={payment.id} hover sx={{ cursor: 'pointer' }} onClick={() => navigate('/portal/payments')}>
                         <TableCell sx={{ fontWeight: 500 }}>{payment.number}</TableCell>
                         <TableCell>{payment.date}</TableCell>
                         <TableCell sx={{ fontWeight: 600, color: 'success.main' }}>
-                          ${payment.amount.toLocaleString()}
+                          ${(payment.amount || 0).toLocaleString()}
                         </TableCell>
                         <TableCell>{payment.method}</TableCell>
                       </TableRow>
