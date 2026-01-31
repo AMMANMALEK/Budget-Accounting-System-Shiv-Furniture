@@ -7,6 +7,8 @@ const AuthLayout = () => {
     <Box
       sx={{
         minHeight: '100vh',
+        width: '100vw',
+        m: 0,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

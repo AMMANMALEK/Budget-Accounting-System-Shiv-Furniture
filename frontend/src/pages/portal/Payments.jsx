@@ -82,7 +82,7 @@ const Payments = () => {
   const paginatedData = filteredPayments.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   return (
-    <Box>
+    <Box sx={{ width: '100%', minHeight: '100%', m: 0, p: 0 }}>
       <PageHeader 
         title="Payment History" 
         subtitle="View and download your payment receipts"

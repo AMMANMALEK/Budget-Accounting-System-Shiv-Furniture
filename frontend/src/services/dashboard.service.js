@@ -99,7 +99,62 @@ const getMonthlySpend = async () => {
       { name: 'Jun', spend: 5500 }
     ];
   } catch (error) {
-    console.error('Monthly spend data not available:', error);
+    console.error('Failed to get monthly spend:', error);
+    return [];
+  }
+};
+
+const getFinancialOverview = async () => {
+  try {
+    const data = await fetchDashboard();
+    // Return mock data for financial overview
+    return {
+      totalRevenue: { value: 0, trend: '0%', status: 'neutral' },
+      totalExpenses: { value: 0, trend: '0%', status: 'neutral' },
+      netProfit: { value: 0, trend: '0%', status: 'neutral' },
+      outstandingReceivables: { value: 0, trend: '0%', status: 'neutral' }
+    };
+  } catch (error) {
+    console.error('Failed to get financial overview:', error);
+    return {
+      totalRevenue: { value: 0, trend: '0%', status: 'neutral' },
+      totalExpenses: { value: 0, trend: '0%', status: 'neutral' },
+      netProfit: { value: 0, trend: '0%', status: 'neutral' },
+      outstandingReceivables: { value: 0, trend: '0%', status: 'neutral' }
+    };
+  }
+};
+
+const getTopProducts = async () => {
+  try {
+    const data = await fetchDashboard();
+    // Return mock data for top products
+    return [
+      { name: 'Office Chair', revenue: 12000, quantity: 45 },
+      { name: 'Wooden Desk', revenue: 8500, quantity: 28 },
+      { name: 'Conference Table', revenue: 6000, quantity: 5 },
+      { name: 'Filing Cabinet', revenue: 4500, quantity: 15 },
+      { name: 'Bookshelf', revenue: 3200, quantity: 12 }
+    ];
+  } catch (error) {
+    console.error('Failed to get top products:', error);
+    return [];
+  }
+};
+
+const getRecentSalesOrders = async () => {
+  try {
+    const data = await fetchDashboard();
+    // Return mock data for recent sales
+    return [
+      { id: 'SO-001', customer: 'Acme Corp', date: '2024-03-15', total: 1250.00, status: 'Confirmed' },
+      { id: 'SO-002', customer: 'Globex Inc', date: '2024-03-14', total: 850.50, status: 'Pending' },
+      { id: 'SO-003', customer: 'Soylent Corp', date: '2024-03-13', total: 2100.00, status: 'Shipped' },
+      { id: 'SO-004', customer: 'Initech', date: '2024-03-12', total: 540.00, status: 'Draft' },
+      { id: 'SO-005', customer: 'Umbrella Corp', date: '2024-03-11', total: 3200.00, status: 'Confirmed' }
+    ];
+  } catch (error) {
+    console.error('Failed to get recent sales orders:', error);
     return [];
   }
 };
@@ -147,6 +202,9 @@ const dashboardService = {
   getCostCenterDist,
   getAlerts,
   getRecentActivity,
+  getFinancialOverview,
+  getTopProducts,
+  getRecentSalesOrders,
 };
 
 export default dashboardService;

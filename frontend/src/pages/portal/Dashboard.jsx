@@ -44,7 +44,7 @@ const PortalDashboard = () => {
   };
 
   return (
-    <Box>
+    <Box sx={{ width: '100%', minHeight: '100%', m: 0, p: 0 }}>
       <PageHeader title="Portal Dashboard" subtitle="Overview of your account activity" />
 
       {/* KPI Cards */}
@@ -108,11 +108,11 @@ const PortalDashboard = () => {
       </Grid>
 
       {/* Recent Orders & Payments */}
-      <Grid container spacing={3}>
+      <Grid container spacing={4}>
         {/* Recent Orders */}
         <Grid item xs={12} md={6}>
-          <Card sx={{ borderRadius: 3, boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.05)', height: '100%' }}>
-            <CardContent>
+          <Card sx={{ borderRadius: 4, boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.05)', height: '100%' }}>
+            <CardContent sx={{ p: 3, '&:last-child': { pb: 3 } }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6" fontWeight={600}>Recent Orders</Typography>
                 <Button 

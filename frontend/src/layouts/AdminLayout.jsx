@@ -52,10 +52,10 @@ const AdminLayout = () => {
       icon: <Business />,
       submenu: 'masters',
       items: [
+        { title: 'Budgets', path: '/admin/masters/budgets', icon: <AccountBalance /> },
         { title: 'Contacts', path: '/admin/masters/contacts', icon: <People /> },
         { title: 'Products', path: '/admin/masters/products', icon: <Inventory /> },
-        { title: 'Cost Centers', path: '/admin/masters/cost-centers', icon: <AccountBalance /> },
-        { title: 'Budgets', path: '/admin/masters/budgets', icon: <MonetizationOn /> },
+        { title: 'Cost Centers', path: '/admin/masters/cost-centers', icon: <ShowChart /> },
         { title: 'Auto Rules', path: '/admin/masters/auto-rules', icon: <Settings /> }
       ]
     },
@@ -105,7 +105,7 @@ const AdminLayout = () => {
   ];
 
   return (
-    <Box sx={{ display: 'flex' }}>
+    <Box sx={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden' }}>
       <CssBaseline />
       
       <Topbar 
@@ -128,14 +128,11 @@ const AdminLayout = () => {
       <Box 
         component="main" 
         sx={{ 
-          flexGrow: 1, 
-          p: 3, 
-          width: { sm: `calc(100% - ${open ? drawerWidth : collapsedWidth}px)` },
-          ml: { sm: `${open ? drawerWidth : collapsedWidth}px` }, // Add margin left to push content
-          transition: (theme) => theme.transitions.create(['width', 'margin'], {
-            easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.leavingScreen,
-          }),
+          flex: 1, 
+          height: '100vh', 
+          overflow: 'auto', 
+          p: 2, 
+          m: 0 
         }}
       >
         <Toolbar />

@@ -55,7 +55,7 @@ const PortalLayout = () => {
   ];
 
   return (
-    <Box sx={{ display: 'flex' }}>
+    <Box sx={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden' }}>
       <CssBaseline />
       
       <Topbar 
@@ -79,13 +79,10 @@ const PortalLayout = () => {
         component="main" 
         sx={{ 
           flexGrow: 1, 
+          height: '100vh', 
+          overflow: 'auto', 
           p: 3, 
-          width: { sm: `calc(100% - ${open ? drawerWidth : collapsedWidth}px)` },
-          ml: { sm: `${open ? drawerWidth : collapsedWidth}px` },
-          transition: (theme) => theme.transitions.create(['width', 'margin'], {
-            easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.leavingScreen,
-          }),
+          m: 0 
         }}
       >
         <Toolbar />

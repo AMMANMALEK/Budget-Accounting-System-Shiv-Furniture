@@ -32,6 +32,9 @@ const Sidebar = ({
       sx={{
         width: open ? drawerWidth : collapsedWidth,
         flexShrink: 0,
+        height: '100vh',
+        whiteSpace: 'nowrap',
+        boxSizing: 'border-box',
         [`& .MuiDrawer-paper`]: {
           width: open ? drawerWidth : collapsedWidth,
           boxSizing: 'border-box',

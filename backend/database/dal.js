@@ -523,67 +523,26 @@ const productDAL = {
 // Dashboard DAL functions
 const dashboardDAL = {
   async getDashboardData() {
-    // Get KPIs
-    const totalBudgetsResult = await query(`
-      SELECT COUNT(*) as count, SUM(bl.planned_amount) as total_amount 
-      FROM budgets b 
-      LEFT JOIN budget_lines bl ON b.id = bl.budget_id
-    `);
-
-    const totalInvoicesResult = await query(`
-      SELECT COUNT(*) as count, SUM(il.quantity * il.price) as total_amount 
-      FROM customer_invoices ci 
-      JOIN invoice_lines il ON ci.id = il.invoice_id 
-      WHERE ci.state = $1
-    `, ['POSTED']);
-
-    // Get recent activity
-    // Frontend expects: user, action, time
-    const recentActivityResult = await query(`
-      SELECT 
-        COALESCE(c.name, 'Unknown System User') as "user",
-        CASE 
-          WHEN ci.state = 'DRAFT' THEN 'Created Draft Invoice' || ' #' || ci.id
-          WHEN ci.state = 'POSTED' THEN 'Posted Invoice' || ' #' || ci.id
-          ELSE 'Updated Invoice' || ' #' || ci.id
-        END as action,
-        to_char(ci.created_at, 'YYYY-MM-DD HH24:MI') as time,
-        'invoice' as type, 
-        ci.id::text as reference, 
-        SUM(il.quantity * il.price) as amount
-      FROM customer_invoices ci 
-      JOIN invoice_lines il ON ci.id = il.invoice_id
-      LEFT JOIN contacts c ON ci.customer_id = c.id
-      WHERE ci.created_at >= NOW() - INTERVAL '30 days'
-      GROUP BY ci.id, ci.created_at, ci.state, c.name
-      ORDER BY ci.created_at DESC 
-      LIMIT 10
-    `);
-
+    // Return mock/placeholder data structure to satisfy frontend without DB queries
+    // or return basic KPIs if they were previously implemented via other DALs.
+    // Since we are revoking changes, we revert to a simple state.
+    
     return {
-      kpis: {
-        totalBudget: {
-          value: parseFloat(totalBudgetsResult.rows[0].total_amount || 0),
-          trend: '+5%', // Mock trend for now
-          status: 'up'
-        },
-        committed: {
-          value: parseFloat(totalInvoicesResult.rows[0].total_amount || 0),
-          trend: '+12%',
-          status: 'up'
-        },
-        achieved: {
-          value: parseFloat(totalInvoicesResult.rows[0].total_amount || 0), // Using invoice amount as achieved for now
-          trend: '+2%',
-          status: 'up'
-        },
-        remaining: {
-          value: parseFloat(totalBudgetsResult.rows[0].total_amount || 0) - parseFloat(totalInvoicesResult.rows[0].total_amount || 0),
-          trend: '-5%',
-          status: 'down'
-        }
+      financialOverview: {
+        revenue: 0,
+        expenses: 0,
+        netProfit: 0,
+        receivables: 0
       },
-      recentActivity: recentActivityResult.rows
+      topProducts: [],
+      recentSales: [],
+      recentActivity: [],
+      kpis: {
+        totalBudget: { value: 0, trend: '0%', status: 'neutral' },
+        committed: { value: 0, trend: '0%', status: 'neutral' },
+        achieved: { value: 0, trend: '0%', status: 'neutral' },
+        remaining: { value: 0, trend: '0%', status: 'neutral' }
+      }
     };
   }
 };

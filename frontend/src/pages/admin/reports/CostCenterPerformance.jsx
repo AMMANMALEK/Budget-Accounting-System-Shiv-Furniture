@@ -69,7 +69,7 @@ const CostCenterPerformance = () => {
   ];
 
   return (
-    <Box>
+    <Box sx={{ width: '100%', minHeight: '100%', m: 0, p: 0 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <PageHeader title="Cost Center Performance" />
         <Box sx={{ display: 'flex', gap: 2 }}>

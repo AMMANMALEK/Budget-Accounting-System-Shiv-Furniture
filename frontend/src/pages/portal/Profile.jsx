@@ -109,7 +109,7 @@ const Profile = () => {
   };
 
   return (
-    <Box>
+    <Box sx={{ width: '100%', minHeight: '100%', m: 0, p: 0 }}>
       <PageHeader title="My Profile" subtitle="Manage your account information" />
 
       <Grid container spacing={3}>

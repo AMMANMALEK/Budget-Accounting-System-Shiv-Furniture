@@ -11,7 +11,7 @@ const PagePlaceholder = () => {
     .join(' ');
 
   return (
-    <Box>
+    <Box sx={{ width: '100%', minHeight: '100%', m: 0, p: 0 }}>
       <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 2 }}>
         <MuiLink underline="hover" color="inherit" href="/admin/dashboard">
           Admin

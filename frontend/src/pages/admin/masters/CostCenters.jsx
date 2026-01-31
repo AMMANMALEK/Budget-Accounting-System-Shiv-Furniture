@@ -1,34 +1,47 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { TextField, Grid, InputAdornment } from '@mui/material';
+import { 
+  TextField, MenuItem, Grid, InputAdornment, Box, Button, Card, 
+  CardContent, Typography, Chip 
+} from '@mui/material';
+import { 
+  Add, ArrowBack, Home, Save, Archive, CheckCircle 
+} from '@mui/icons-material';
 import PageHeader from '../../../components/common/PageHeader';
 import DataTable from '../../../components/common/DataTable';
-import ModalForm from '../../../components/common/ModalForm';
 import ConfirmDialog from '../../../components/common/ConfirmDialog';
 import mastersService from '../../../services/masters.service';
 
 const CostCenters = () => {
+  const [viewMode, setViewMode] = useState('list'); // 'list' | 'form'
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
   
-  const [openModal, setOpenModal] = useState(false);
-  const [modalMode, setModalMode] = useState('create');
+  const [formMode, setFormMode] = useState('create');
   const [selectedItem, setSelectedItem] = useState(null);
   const [saving, setSaving] = useState(false);
 
   const [openDelete, setOpenDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm();
+  const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm({
+    defaultValues: {
+      code: '',
+      name: '',
+      status: 'Active'
+    }
+  });
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await mastersService.costCenters.getAll(page, rowsPerPage, searchTerm);
+      const filters = statusFilter !== 'All' ? { status: statusFilter } : {};
+      const response = await mastersService.costCenters.getAll(page, rowsPerPage, searchTerm, filters);
       setData(response.data);
       setTotalCount(response.total);
     } catch (error) {
@@ -40,7 +53,7 @@ const CostCenters = () => {
 
   useEffect(() => {
     fetchData();
-  }, [page, rowsPerPage, searchTerm]);
+  }, [page, rowsPerPage, searchTerm, statusFilter]);
 
   const handleSearch = (term) => {
     setSearchTerm(term);
@@ -48,17 +61,25 @@ const CostCenters = () => {
   };
 
   const handleAdd = () => {
-    setModalMode('create');
+    setFormMode('create');
     setSelectedItem(null);
-    reset({ code: '', name: '', manager: '', department: '', budget: '' });
-    setOpenModal(true);
+    reset({ 
+      code: '', 
+      name: '', 
+      status: 'Active' 
+    });
+    setViewMode('form');
   };
 
   const handleEdit = (item) => {
-    setModalMode('edit');
+    setFormMode('edit');
     setSelectedItem(item);
-    Object.keys(item).forEach(key => setValue(key, item[key]));
-    setOpenModal(true);
+    reset({
+      code: item.code || '',
+      name: item.name || '',
+      status: item.status || 'Active'
+    });
+    setViewMode('form');
   };
 
   const handleDeleteClick = (item) => {
@@ -66,15 +87,20 @@ const CostCenters = () => {
     setOpenDelete(true);
   };
 
+  const handleBack = () => {
+    setViewMode('list');
+    setSelectedItem(null);
+  };
+
   const onSubmit = async (formData) => {
     setSaving(true);
     try {
-      if (modalMode === 'create') {
+      if (formMode === 'create') {
         await mastersService.costCenters.create(formData);
       } else {
         await mastersService.costCenters.update(selectedItem.id, formData);
       }
-      setOpenModal(false);
+      setViewMode('list');
       fetchData();
     } catch (error) {
       console.error('Error saving cost center:', error);
@@ -98,103 +124,128 @@ const CostCenters = () => {
 
   const columns = [
     { id: 'code', label: 'Code', minWidth: 100 },
-    { id: 'name', label: 'Name', minWidth: 170 },
-    { id: 'manager', label: 'Manager', minWidth: 150 },
-    { id: 'department', label: 'Department', minWidth: 150 },
-    { id: 'budget', label: 'Budget', minWidth: 130, 
-      format: (value) => `$${parseInt(value).toLocaleString()}` 
-    },
+    { id: 'name', label: 'Analytic Name', minWidth: 170 },
   ];
 
+  if (viewMode === 'list') {
+    return (
+      <Box sx={{ width: '100%', minHeight: '100%', m: 0, p: 0 }}>
+        <PageHeader title="Analytics" onAdd={handleAdd} buttonText="New" />
+        
+        <DataTable
+          columns={columns}
+          data={data}
+          loading={loading}
+          page={page}
+          rowsPerPage={rowsPerPage}
+          totalCount={totalCount}
+          onPageChange={setPage}
+          onRowsPerPageChange={setRowsPerPage}
+          onSearch={handleSearch}
+          searchTerm={searchTerm}
+          onEdit={handleEdit}
+          onDelete={handleDeleteClick}
+          searchPlaceholder="Search analytics..."
+          onRowClick={handleEdit}
+          statusValue={statusFilter}
+          onStatusChange={setStatusFilter}
+        />
+
+        <ConfirmDialog
+          open={openDelete}
+          onClose={() => setOpenDelete(false)}
+          onConfirm={handleConfirmDelete}
+          title="Delete Analytic"
+          message={`Are you sure you want to delete ${selectedItem?.name}?`}
+          loading={deleting}
+        />
+      </Box>
+    );
+  }
+
   return (
-    <>
-      <PageHeader title="Cost Centers" onAdd={handleAdd} buttonText="Add Cost Center" />
-      
-      <DataTable
-        columns={columns}
-        data={data}
-        loading={loading}
-        page={page}
-        rowsPerPage={rowsPerPage}
-        totalCount={totalCount}
-        onPageChange={setPage}
-        onRowsPerPageChange={setRowsPerPage}
-        onSearch={handleSearch}
-        searchTerm={searchTerm}
-        onEdit={handleEdit}
-        onDelete={handleDeleteClick}
-        searchPlaceholder="Search cost centers..."
-      />
-
-      <ModalForm
-        open={openModal}
-        onClose={() => setOpenModal(false)}
-        title={modalMode === 'create' ? 'Add New Cost Center' : 'Edit Cost Center'}
-        onSubmit={handleSubmit(onSubmit)}
-        loading={saving}
+    <Box sx={{ width: '100%', minHeight: '100%', m: 0, p: 0 }}>
+      {/* Top Bar */}
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          mb: 3, 
+          p: 2, 
+          bgcolor: 'background.paper', 
+          borderRadius: 2,
+          boxShadow: '0px 2px 4px rgba(0,0,0,0.05)'
+        }}
       >
-        <Grid container spacing={2}>
-          <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              label="Code"
-              {...register('code', { required: 'Code is required' })}
-              error={!!errors.code}
-              helperText={errors.code?.message}
-            />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              label="Name"
-              {...register('name', { required: 'Name is required' })}
-              error={!!errors.name}
-              helperText={errors.name?.message}
-            />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              label="Manager"
-              {...register('manager', { required: 'Manager is required' })}
-              error={!!errors.manager}
-              helperText={errors.manager?.message}
-            />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              label="Department"
-              {...register('department', { required: 'Department is required' })}
-              error={!!errors.department}
-              helperText={errors.department?.message}
-            />
-          </Grid>
-          <Grid item xs={12}>
-            <TextField
-              fullWidth
-              label="Budget Allocation"
-              type="number"
-              InputProps={{
-                startAdornment: <InputAdornment position="start">$</InputAdornment>,
-              }}
-              {...register('budget', { required: 'Budget is required', min: 0 })}
-              error={!!errors.budget}
-              helperText={errors.budget?.message}
-            />
-          </Grid>
-        </Grid>
-      </ModalForm>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button 
+            variant="contained" 
+            color="primary" 
+            startIcon={<Add />}
+            onClick={handleAdd}
+          >
+            New
+          </Button>
+          <Button 
+            variant="contained" 
+            color="success" 
+            startIcon={<CheckCircle />}
+            onClick={handleSubmit((data) => onSubmit({ ...data, status: 'Active' }))}
+          >
+            Confirm
+          </Button>
+          <Button 
+            variant="outlined" 
+            color="warning" 
+            startIcon={<Archive />}
+            onClick={handleSubmit((data) => onSubmit({ ...data, status: 'Archived' }))}
+          >
+            Archived
+          </Button>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button startIcon={<Home />} onClick={handleBack}>Home</Button>
+          <Button startIcon={<ArrowBack />} onClick={handleBack}>Back</Button>
+        </Box>
+      </Box>
 
-      <ConfirmDialog
-        open={openDelete}
-        onClose={() => setOpenDelete(false)}
-        onConfirm={handleConfirmDelete}
-        title="Delete Cost Center"
-        message={`Are you sure you want to delete ${selectedItem?.name}? This action cannot be undone.`}
-        loading={deleting}
-      />
-    </>
+      {/* Form Content */}
+      <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+        <Card sx={{ width: '100%', maxWidth: 800, borderRadius: 2, boxShadow: '0px 4px 20px rgba(0,0,0,0.05)' }}>
+          <Box sx={{ bgcolor: 'action.hover', p: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Typography variant="h6" fontWeight="600">
+              {formMode === 'create' ? 'New Analytic' : selectedItem?.name}
+            </Typography>
+            {watch('status') && (
+              <Chip 
+                label={watch('status')} 
+                color={watch('status') === 'Active' ? 'success' : 'default'} 
+                size="small" 
+              />
+            )}
+          </Box>
+          <CardContent sx={{ p: 4 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <TextField
+                fullWidth
+                label="Code"
+                {...register('code', { required: 'Code is required' })}
+                error={!!errors.code}
+                helperText={errors.code?.message}
+              />
+              <TextField
+                fullWidth
+                label="Analytic Name"
+                {...register('name', { required: 'Name is required' })}
+                error={!!errors.name}
+                helperText={errors.name?.message}
+              />
+            </Box>
+          </CardContent>
+        </Card>
+      </Box>
+    </Box>
   );
 };
 

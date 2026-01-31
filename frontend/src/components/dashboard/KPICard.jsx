@@ -25,7 +25,7 @@ const KPICard = ({ title, value, trend, status, icon, color, loading }) => {
     <Card 
       sx={{ 
         height: '100%', 
-        borderRadius: 3, 
+        borderRadius: 4, 
         boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.05)',
         transition: 'transform 0.2s',
         '&:hover': {
@@ -34,12 +34,12 @@ const KPICard = ({ title, value, trend, status, icon, color, loading }) => {
         }
       }}
     >
-      <CardContent>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+      <CardContent sx={{ p: 3, '&:last-child': { pb: 3 } }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
           <Box 
             sx={{ 
-              p: 1.5, 
-              borderRadius: 2, 
+              p: 2, 
+              borderRadius: 3, 
               bgcolor: `${color}15`, 
               color: color,
               display: 'flex',
@@ -47,21 +47,21 @@ const KPICard = ({ title, value, trend, status, icon, color, loading }) => {
               justifyContent: 'center'
             }}
           >
-            {icon}
+            {React.cloneElement(icon, { fontSize: "large" })}
           </Box>
           {trend && (
-            <Box sx={{ display: 'flex', alignItems: 'center', color: trendColor }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', color: trendColor, bgcolor: `${trendColor}15`, px: 1, py: 0.5, borderRadius: 1 }}>
               <TrendIcon fontSize="small" sx={{ mr: 0.5 }} />
-              <Typography variant="caption" fontWeight="600">
+              <Typography variant="caption" fontWeight="700">
                 {trend}
               </Typography>
             </Box>
           )}
         </Box>
-        <Typography variant="h4" fontWeight="700" color="text.primary" sx={{ mb: 0.5 }}>
+        <Typography variant="h4" fontWeight="700" color="text.primary" sx={{ mb: 1 }}>
           {value}
         </Typography>
-        <Typography variant="body2" color="text.secondary" fontWeight="500">
+        <Typography variant="body1" color="text.secondary" fontWeight="500">
           {title}
         </Typography>
       </CardContent>

@@ -28,11 +28,11 @@ const ProductionDashboard = () => {
   };
 
   return (
-    <Box>
+    <Box sx={{ width: '100%', minHeight: '100%', m: 0, p: 0 }}>
       <PageHeader title="Production Dashboard" />
       
       {/* KPI Cards */}
-      <Grid container spacing={3} mb={3}>
+      <Grid container spacing={4} mb={5}>
         {loading ? (
           [1, 2, 3, 4].map((i) => (
             <Grid item xs={12} sm={6} md={3} key={i}>
@@ -54,7 +54,7 @@ const ProductionDashboard = () => {
       </Grid>
 
       {/* Charts */}
-      <Grid container spacing={3}>
+      <Grid container spacing={4}>
         {/* Line Chart */}
         <Grid item xs={12} md={8}>
           <ChartCard title="Monthly Expenses Trend" loading={loading}>

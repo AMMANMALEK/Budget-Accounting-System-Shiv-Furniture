@@ -22,11 +22,11 @@ const AlertsPanel = ({ alerts, loading }) => {
   };
 
   return (
-    <Card sx={{ height: '100%', borderRadius: 3, boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.05)' }}>
-      <CardHeader title="System Alerts" titleTypographyProps={{ variant: 'h6', fontWeight: 600 }} />
-      <CardContent sx={{ p: 0 }}>
+    <Card sx={{ height: '100%', borderRadius: 4, boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.05)' }}>
+      <CardHeader title="System Alerts" titleTypographyProps={{ variant: 'h6', fontWeight: 600 }} sx={{ px: 3, pt: 3, pb: 1 }} />
+      <CardContent sx={{ p: 0, '&:last-child': { pb: 2 } }}>
         {loading ? (
-          <Box sx={{ p: 2 }}>
+          <Box sx={{ p: 3 }}>
             <Skeleton height={60} sx={{ mb: 1 }} />
             <Skeleton height={60} sx={{ mb: 1 }} />
             <Skeleton height={60} />
@@ -38,7 +38,7 @@ const AlertsPanel = ({ alerts, loading }) => {
                 key={alert.id} 
                 divider={index !== alerts.length - 1}
                 sx={{ 
-                  py: 2,
+                  py: 2.5,
                   px: 3,
                   '&:hover': { bgcolor: 'action.hover' }
                 }}

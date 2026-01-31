@@ -152,7 +152,7 @@ const SalesOrders = () => {
   ];
 
   return (
-    <>
+    <Box sx={{ width: '100%', minHeight: '100%', m: 0, p: 0 }}>
       <PageHeader 
         title="Sales Orders" 
         onAdd={handleCreate} 
@@ -266,7 +266,7 @@ const SalesOrders = () => {
         title="Delete Sales Order"
         content="Are you sure you want to delete this order?"
       />
-    </>
+    </Box>
   );
 };
 

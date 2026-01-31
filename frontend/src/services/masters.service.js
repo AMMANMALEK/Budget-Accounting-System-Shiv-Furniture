@@ -2,9 +2,9 @@ import client from '../api/axiosConfig';
 
 // --- Generic CRUD Helper ---
 const createCrudService = (endpoint) => ({
-  getAll: async (page = 0, limit = 10, search = '') => {
+  getAll: async (page = 0, limit = 10, search = '', filters = {}) => {
     const response = await client.get(endpoint, {
-      params: { page, limit, search }
+      params: { page, limit, search, ...filters }
     });
     // Assuming backend returns { data: [], total: N } structure
     // If backend returns array directly, wrap it: { data: response.data, total: response.data.length }
@@ -61,14 +61,22 @@ const mapContactToApi = (payload) => {
   return {
     name: payload.name,
     email: payload.email,
-    contact_type
+    contact_type,
+    phone: payload.phone,
+    street: payload.street,
+    city: payload.city,
+    state: payload.state,
+    country: payload.country,
+    pincode: payload.pincode,
+    // Pass status if backend accepts it, otherwise it might be ignored
+    status: payload.status
   };
 };
 
 const contactsService = {
-  getAll: async (page = 0, limit = 10, search = '') => {
+  getAll: async (page = 0, limit = 10, search = '', filters = {}) => {
     const response = await client.get('/contacts', {
-      params: { page, limit, search }
+      params: { page, limit, search, ...filters }
     });
 
     const result = response.data;

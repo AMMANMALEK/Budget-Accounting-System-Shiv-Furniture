@@ -107,7 +107,7 @@ const Orders = () => {
   const paginatedData = filteredOrders.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   return (
-    <Box>
+    <Box sx={{ width: '100%', minHeight: '100%', m: 0, p: 0 }}>
       <PageHeader 
         title="My Orders" 
         subtitle="Track your recent orders"

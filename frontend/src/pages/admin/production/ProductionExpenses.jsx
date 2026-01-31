@@ -137,7 +137,7 @@ const ProductionExpenses = () => {
   ];
 
   return (
-    <Box>
+    <Box sx={{ width: '100%', minHeight: '100%', m: 0, p: 0 }}>
       <PageHeader 
         title="Production Expenses" 
         onAdd={() => handleOpenModal()} 

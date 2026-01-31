@@ -123,7 +123,7 @@ const Invoices = () => {
   const paginatedData = filteredInvoices.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   return (
-    <Box>
+    <Box sx={{ width: '100%', minHeight: '100%', m: 0, p: 0 }}>
       <PageHeader 
         title="My Invoices" 
         subtitle="View and manage your invoices"

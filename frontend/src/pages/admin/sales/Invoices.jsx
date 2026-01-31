@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { TextField, MenuItem, Grid, InputAdornment } from '@mui/material';
+import { TextField, MenuItem, Grid, InputAdornment, Box } from '@mui/material';
 import PageHeader from '../../../components/common/PageHeader';
 import DataTable from '../../../components/common/DataTable';
 import ModalForm from '../../../components/common/ModalForm';
@@ -143,7 +143,7 @@ const Invoices = () => {
   ];
 
   return (
-    <>
+    <Box sx={{ width: '100%', minHeight: '100%', m: 0, p: 0 }}>
       <PageHeader 
         title="Customer Invoices" 
         onAdd={handleCreate} 
@@ -267,7 +267,7 @@ const Invoices = () => {
         title="Delete Invoice"
         content="Are you sure you want to delete this invoice?"
       />
-    </>
+    </Box>
   );
 };
 

@@ -14,7 +14,11 @@ import {
   Typography,
   CircularProgress,
   TextField,
-  InputAdornment
+  InputAdornment,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel
 } from '@mui/material';
 import { Edit, Delete, Search, FilterList } from '@mui/icons-material';
 
@@ -33,6 +37,9 @@ const DataTable = ({
   searchPlaceholder = "Search...",
   onSearch,
   searchTerm = "",
+  statusValue,
+  onStatusChange,
+  onRowClick,
   disableSelection = false // Legacy prop, ignored but kept for compatibility
 }) => {
   const handleChangePage = (event, newPage) => {
@@ -49,24 +56,42 @@ const DataTable = ({
     <Paper sx={{ width: '100%', overflow: 'hidden', borderRadius: 3, boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.05)' }}>
       {/* Toolbar */}
       <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid', borderColor: 'divider' }}>
-        {onSearch ? (
-          <TextField
-            size="small"
-            placeholder={searchPlaceholder}
-            value={searchTerm}
-            onChange={(e) => onSearch(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search color="action" />
-                </InputAdornment>
-              ),
-            }}
-            sx={{ width: 300 }}
-          />
-        ) : (
-          <Box /> // Spacer
-        )}
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', width: '100%' }}>
+          {onSearch ? (
+            <TextField
+              size="small"
+              placeholder={searchPlaceholder}
+              value={searchTerm}
+              onChange={(e) => onSearch(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search color="action" />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{ width: 300 }}
+            />
+          ) : (
+            <Box /> 
+          )}
+
+          {onStatusChange && (
+            <FormControl size="small" sx={{ minWidth: 150 }}>
+              <InputLabel id="status-select-label">Status</InputLabel>
+              <Select
+                labelId="status-select-label"
+                value={statusValue || 'All'}
+                label="Status"
+                onChange={(e) => onStatusChange(e.target.value)}
+              >
+                <MenuItem value="All">All Status</MenuItem>
+                <MenuItem value="Active">Active</MenuItem>
+                <MenuItem value="Archived">Archived</MenuItem>
+              </Select>
+            </FormControl>
+          )}
+        </Box>
         
         {/* Placeholder for future filter implementation or custom toolbar actions */}
         <Tooltip title="Filter list">
@@ -100,48 +125,59 @@ const DataTable = ({
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={columns.length + (showActions ? 1 : 0)} align="center" sx={{ py: 6 }}>
+                <TableCell colSpan={columns.length + (showActions ? 1 : 0)} align="center" sx={{ py: 3 }}>
                   <CircularProgress />
                 </TableCell>
               </TableRow>
             ) : data.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={columns.length + (showActions ? 1 : 0)} align="center" sx={{ py: 6 }}>
-                  <Typography color="text.secondary">No records found</Typography>
+                <TableCell colSpan={columns.length + (showActions ? 1 : 0)} align="center" sx={{ py: 3 }}>
+                  <Typography variant="body2" color="textSecondary">
+                    No data found
+                  </Typography>
                 </TableCell>
               </TableRow>
             ) : (
-              data.map((row) => {
+              data.map((row, index) => {
                 return (
-                  <TableRow hover role="checkbox" tabIndex={-1} key={row.id}>
+                  <TableRow 
+                    hover 
+                    role="checkbox" 
+                    tabIndex={-1} 
+                    key={row.id || index}
+                    onClick={() => onRowClick && onRowClick(row)}
+                    sx={{ cursor: onRowClick ? 'pointer' : 'default' }}
+                  >
                     {columns.map((column) => {
                       const value = row[column.id || column.field];
                       return (
-                        <TableCell key={column.id || column.field} align={column.align}>
-                          {column.render ? column.render(row) : (column.format ? column.format(value, row) : value)}
+                        <TableCell key={column.id || column.field} align={column.align || 'left'}>
+                          {column.format ? column.format(value) : value}
                         </TableCell>
                       );
                     })}
                     {showActions && (
-                      <TableCell align="right">
-                        {renderActions ? renderActions(row) : (
-                          <>
-                            {onEdit && (
-                              <Tooltip title="Edit">
-                                <IconButton size="small" onClick={() => onEdit(row)} sx={{ color: 'primary.main', mr: 1 }}>
-                                  <Edit fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                            )}
-                            {onDelete && (
-                              <Tooltip title="Delete">
-                                <IconButton size="small" onClick={() => onDelete(row)} sx={{ color: 'error.main' }}>
-                                  <Delete fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                            )}
-                          </>
-                        )}
+                      <TableCell align="right" onClick={(e) => e.stopPropagation()}>
+                        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                          {renderActions ? renderActions(row) : (
+                            <>
+                              {onEdit && (
+                                <Tooltip title="Edit">
+                                  <IconButton onClick={() => onEdit(row)} size="small" color="primary">
+                                    <Edit fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
+                              {onDelete && (
+                                <Tooltip title="Delete">
+                                  <IconButton onClick={() => onDelete(row)} size="small" color="error">
+                                    <Delete fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
+                            </>
+                          )}
+                        </Box>
                       </TableCell>
                     )}
                   </TableRow>
@@ -151,10 +187,8 @@ const DataTable = ({
           </TableBody>
         </Table>
       </TableContainer>
-
-      {/* Pagination */}
       <TablePagination
-        rowsPerPageOptions={[5, 10, 25]}
+        rowsPerPageOptions={[10, 25, 100]}
         component="div"
         count={totalCount}
         rowsPerPage={rowsPerPage}
